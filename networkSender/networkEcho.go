@@ -24,29 +24,29 @@ var NetworkEcho = &cobra.Command{
 		address := fmt.Sprintf("%s:%d", Host, Port)
 		log.Printf("Address: '%s'", address)
 
-		conn, err := net.Dial(Protocol, address)
-		if err != nil {
-			panic(err)
-		}
-
-		defer func() {
-			if Verbose {
-				log.Println("Closing connection.", conn)
-			}
-
-			if conn != nil {
-				err := conn.Close()
-				if err != nil {
-					panic(err)
-				}
-			}
-		}()
-
-		if Verbose {
-			log.Println("Got a successful connection: ", conn)
-		}
-
 		for i, v := range cmd.Flags().Args() {
+			conn, err := net.Dial(Protocol, address)
+			if err != nil {
+				panic(err)
+			}
+
+			defer func() {
+				if Verbose {
+					log.Println("Closing connection.", conn)
+				}
+
+				if conn != nil {
+					err := conn.Close()
+					if err != nil {
+						panic(err)
+					}
+				}
+			}()
+
+			if Verbose {
+				log.Println("Got a successful connection: ", conn)
+			}
+
 			b := []byte(v)
 			written, err := conn.Write(b)
 			if err != nil {
@@ -56,22 +56,22 @@ var NetworkEcho = &cobra.Command{
 			if Verbose {
 				log.Printf("Wrote arg %d (%s) with %d bytes.\n", i, v, written)
 			}
-		}
 
-		if Verbose {
-			log.Println("Listening for response now...")
-		}
-
-		response := make([]byte, 1024)
-		n, err := conn.Read(response)
-		if err != nil {
-			if err == io.EOF {
-				log.Printf("Received an EOF.")
-			} else {
-				log.Fatal("An error occurred: ", err)
+			if Verbose {
+				log.Println("Listening for response now...")
 			}
-		} else {
-			log.Printf("Got response %d bytes: %s.", n, response[:n])
+
+			response := make([]byte, 1024)
+			n, err := conn.Read(response)
+			if err != nil {
+				if err == io.EOF {
+					log.Printf("Received an EOF.")
+				} else {
+					log.Fatal("An error occurred: ", err)
+				}
+			} else {
+				log.Printf("Got response %d bytes: %s.", n, response)
+			}
 		}
 	},
 }

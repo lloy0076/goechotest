@@ -55,9 +55,9 @@ var Listener = &cobra.Command{
 				log.Fatal(err)
 			}
 
-			go func(c net.Conn) {
+			go func(conn net.Conn) {
 				defer func() {
-					err := c.Close()
+					err := conn.Close()
 					if err != nil {
 						panic(err)
 					}
@@ -65,7 +65,7 @@ var Listener = &cobra.Command{
 
 				buffer := make([]byte, 1024)
 				n := 0
-				n, err := c.Read(buffer)
+				n, err := conn.Read(buffer)
 				if err != nil {
 					if err == io.EOF {
 						log.Println("Connection closed by client.")
