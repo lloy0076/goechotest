@@ -56,13 +56,6 @@ var Listener = &cobra.Command{
 			}
 
 			go func(c net.Conn) {
-				defer func() {
-					err := c.Close()
-					if err != nil {
-						panic(err)
-					}
-				}()
-
 				buffer := make([]byte, 1024)
 				n := 0
 				n, err := c.Read(buffer)
