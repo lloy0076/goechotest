@@ -84,7 +84,7 @@ var Listener = &cobra.Command{
 
 				// This version works.
 				w, err := conn.Write(buffer[:n])
-				// This version does not work.
+				// The below seems to not always work as I'd expect.
 				// If you replace the above line with the below, then the `go run echo.go network` will send the
 				// string, but it seems somewhat undeterministic what will happen.
 				//w, err := conn.Write(buffer)
