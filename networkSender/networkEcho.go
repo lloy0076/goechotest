@@ -8,29 +8,29 @@ import (
 	"net"
 )
 
-var Verbose bool
-var Port int
-var Host string
-var Protocol string
+var verbose bool
+var port int
+var host string
+var protocol string
 
 var NetworkEcho = &cobra.Command{
 	Use:  "network",
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if Verbose {
-			log.Printf("Running a networkSender echo to port '%d' via the '%s' protocol.\n", Port, Protocol)
+		if verbose {
+			log.Printf("Running a networkSender echo to port '%d' via the '%s' protocol.\n", port, protocol)
 		}
 
-		address := fmt.Sprintf("%s:%d", Host, Port)
+		address := fmt.Sprintf("%s:%d", host, port)
 		log.Printf("Address: '%s'", address)
 
-		conn, err := net.Dial(Protocol, address)
+		conn, err := net.Dial(protocol, address)
 		if err != nil {
 			panic(err)
 		}
 
 		defer func() {
-			if Verbose {
+			if verbose {
 				log.Println("Closing connection.", conn)
 			}
 
@@ -42,43 +42,44 @@ var NetworkEcho = &cobra.Command{
 			}
 		}()
 
-		if Verbose {
+		if verbose {
 			log.Println("Got a successful connection: ", conn)
 		}
 
 		for i, v := range cmd.Flags().Args() {
 			b := []byte(v)
-			written, err := conn.Write(b)
+			w, err := conn.Write(b)
 			if err != nil {
 				panic(err)
 			}
 
-			if Verbose {
-				log.Printf("Wrote arg %d (%s) with %d bytes.\n", i, v, written)
+			if verbose {
+				log.Printf("Wrote arg %d (%s) with %d bytes.\n", i, v, w)
 			}
-		}
 
-		if Verbose {
-			log.Println("Listening for response now...")
-		}
-
-		response := make([]byte, 1024)
-		n, err := conn.Read(response)
-		if err != nil {
-			if err == io.EOF {
-				log.Printf("Received an EOF.")
-			} else {
-				log.Fatal("An error occurred: ", err)
+			if verbose {
+				log.Println("Listening for response now...")
 			}
-		} else {
-			log.Printf("Got response %d bytes: %s.", n, response[:n])
+
+			response := make([]byte, w)
+			n, err := conn.Read(response)
+			if err != nil {
+				if err == io.EOF {
+					log.Printf("Received an EOF.")
+					continue
+				} else {
+					log.Fatal("An unexpected error occurred: ", err)
+				}
+			}
+
+			log.Printf("Wrote %d bytes, got %d bytes: %s.", w, n, string(response[:n]))
 		}
 	},
 }
 
 func init() {
-	NetworkEcho.Flags().BoolVarP(&Verbose, "verbose", "v", false, "Set this flag to have more verbose output.")
-	NetworkEcho.PersistentFlags().IntVarP(&Port, "port", "p", 3031, "The port to echo to.")
-	NetworkEcho.PersistentFlags().StringVarP(&Protocol, "protocol", "t", "tcp", "The networkSender protocol.")
-	NetworkEcho.PersistentFlags().StringVarP(&Host, "hostname", "n", "127.0.0.1", "The hostname or IP address to connect to.")
+	NetworkEcho.Flags().BoolVarP(&verbose, "verbose", "v", false, "Set this flag to have more verbose output.")
+	NetworkEcho.PersistentFlags().IntVarP(&port, "port", "p", 3031, "The port to echo to.")
+	NetworkEcho.PersistentFlags().StringVarP(&protocol, "protocol", "t", "tcp", "The networkSender protocol.")
+	NetworkEcho.PersistentFlags().StringVarP(&host, "hostname", "n", "127.0.0.1", "The hostname or IP address to connect to.")
 }
