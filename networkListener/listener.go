@@ -8,10 +8,10 @@ import (
 	"net"
 )
 
-var Verbose bool
-var Port int
-var Host string
-var Protocol string
+var verbose bool
+var port int
+var host string
+var protocol string
 
 var Listener = &cobra.Command{
 	Use: "listen",
@@ -19,21 +19,20 @@ var Listener = &cobra.Command{
 		fmt.Println()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if Verbose {
-			log.Printf("Running a networkSender listener on port '%d' via the '%s' protocol.\n", Port, Protocol)
+		if verbose {
+			log.Printf("Running a networkSender listener on port '%d' via the '%s' protocol.\n", port, protocol)
 		}
 
-		address := fmt.Sprintf("%s:%d", Host, Port)
+		address := fmt.Sprintf("%s:%d", host, port)
 		log.Printf("Address: '%s'", address)
 
-		ln, err := net.Listen(Protocol, address)
+		ln, err := net.Listen(protocol, address)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Printf("DEBUG: from main: ")
 		defer func() {
-			if Verbose {
+			if verbose {
 				log.Println("Closing connection.", ln)
 			}
 
@@ -45,7 +44,7 @@ var Listener = &cobra.Command{
 			}
 		}()
 
-		if Verbose {
+		if verbose {
 			log.Println("Listening...")
 		}
 
@@ -55,47 +54,44 @@ var Listener = &cobra.Command{
 				log.Fatal(err)
 			}
 
-			go func(c net.Conn) {
-				buffer := make([]byte, 1024)
-				n := 0
-				n, err := c.Read(buffer)
-				if err != nil {
-					if err == io.EOF {
-						log.Println("Connection closed by client.")
-					} else {
-						log.Fatal(err)
-					}
-				}
-
-				if Verbose {
-					log.Printf("Copied %d bytes into the buffer.\n", n)
-				}
-
-				if Verbose {
-					log.Printf("%s", buffer)
-				}
-
-				// This version works.
-				w, err := conn.Write(buffer[:n])
-				// The below seems to not always work as I'd expect.
-				// If you replace the above line with the below, then the `go run echo.go network` will send the
-				// string, but it seems somewhat undeterministic what will happen.
-				//w, err := conn.Write(buffer)
-				if err != nil {
-					log.Fatal("An error occurred writing the buffer: ", err)
-				}
-
-				if Verbose {
-					log.Printf("Wrote %d bytes to the connection.\n", w)
-				}
-			}(conn)
+			go handleConn(conn)
 		}
 	},
 }
 
+func handleConn(conn net.Conn) {
+	for {
+		buffer := make([]byte, 1024)
+		n := 0
+		n, err2 := conn.Read(buffer)
+		if err2 != nil {
+			if err2 == io.EOF {
+				break
+			}
+
+			log.Printf("Unexpected error: %s.", err2)
+			break
+		}
+
+		if verbose {
+			log.Printf("Copied %d bytes into the buffer.\n", n)
+			log.Printf("%s\n", buffer)
+		}
+
+		w, err := conn.Write(buffer[:n])
+		if err != nil {
+			log.Fatal("Error writing: ", err)
+		}
+
+		if verbose {
+			log.Printf("Wrote %d bytes to the connection.\n", w)
+		}
+	}
+}
+
 func init() {
-	Listener.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Set this flag to have more verbose output.")
-	Listener.PersistentFlags().IntVarP(&Port, "port", "p", 3031, "The port to echo to.")
-	Listener.PersistentFlags().StringVarP(&Protocol, "protocol", "t", "tcp", "The networkSender protocol.")
-	Listener.PersistentFlags().StringVarP(&Host, "hostname", "n", "127.0.0.1", "The hostname or IP address to connect to.")
+	Listener.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Set this flag to have more verbose output.")
+	Listener.PersistentFlags().IntVarP(&port, "port", "p", 3031, "The port to echo to.")
+	Listener.PersistentFlags().StringVarP(&protocol, "protocol", "t", "tcp", "The networkSender protocol.")
+	Listener.PersistentFlags().StringVarP(&host, "hostname", "n", "127.0.0.1", "The hostname or IP address to connect to.")
 }
